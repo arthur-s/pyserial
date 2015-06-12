@@ -8,7 +8,7 @@
 # repr, useful for debug purposes)
 
 
-import sys, os, serial, threading, atexit
+import sys, os, serial, threading
 try:
     from serial.tools.list_ports import comports
 except ImportError:
@@ -143,7 +143,7 @@ elif os.name == 'posix':
     def cleanup_console():
         console.cleanup()
 
-    atexit.register(cleanup_console)      # terminal modes have to be restored on exit...
+    sys.exitfunc = cleanup_console      # terminal modes have to be restored on exit...
 
 else:
     raise NotImplementedError("Sorry no implementation for your platform (%s) available." % sys.platform)
@@ -626,7 +626,7 @@ def main():
         if args:
             parser.error("too many arguments")
     else:
-        # noport given on command line -> ask user now
+        # no port given on command line -> ask user now
         if port is None:
             dump_port_list()
             port = input('Enter port name:')
