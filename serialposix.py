@@ -230,7 +230,7 @@ and with a bit luck you can get this module running...
     def set_special_baudrate(port, baudrate):
         raise SerialException("sorry don't know how to handle non standard baud rate on this platform")
     baudrate_constants = {}
-    #~ raise Exception, "this module does not run on this platform, sorry."
+    #~ raise Exception as "this module does not run on this platform, sorry."
 
 # whats up with "aix", "beos", ....
 # they should work, just need to know the device names.
@@ -269,6 +269,8 @@ TIOCM_DTR_str = struct.pack('I', TIOCM_DTR)
 
 TIOCSBRK  = hasattr(TERMIOS, 'TIOCSBRK') and TERMIOS.TIOCSBRK or 0x5427
 TIOCCBRK  = hasattr(TERMIOS, 'TIOCCBRK') and TERMIOS.TIOCCBRK or 0x5428
+
+CMSPAR = 0o10000000000 # Use "stick" (mark/space) parity
 
 
 class PosixSerial(SerialBase):
@@ -386,6 +388,11 @@ class PosixSerial(SerialBase):
             cflag |=  (TERMIOS.PARENB)
         elif self._parity == PARITY_ODD:
             cflag |=  (TERMIOS.PARENB|TERMIOS.PARODD)
+        elif self._parity == PARITY_MARK and plat[:5] == 'linux':
+            cflag |=  (TERMIOS.PARENB|CMSPAR|TERMIOS.PARODD)
+        elif self._parity == PARITY_SPACE and plat[:5] == 'linux':
+            cflag |=  (TERMIOS.PARENB|CMSPAR)
+            cflag &= ~(TERMIOS.PARODD)
         else:
             raise ValueError('Invalid parity: %r' % self._parity)
         # setup flow control
@@ -414,7 +421,7 @@ class PosixSerial(SerialBase):
         # XXX should there be a warning if setting up rtscts (and xonxoff etc) fails??
 
         # buffer
-        # vmin "minimal number of characters to be read. = for non blocking"
+        # vmin "minimal number of characters to be read. 0 for non blocking"
         if vmin < 0 or vmin > 255:
             raise ValueError('Invalid vmin: %r ' % vmin)
         cc[TERMIOS.VMIN] = vmin
@@ -638,9 +645,9 @@ class PosixSerial(SerialBase):
             termios.tcflow(self.fd, TERMIOS.TCOOFF)
 
 
-# assemble Serial class with the platform specifc implementation and the base
+# assemble Serial class with the platform specific implementation and the base
 # for file-like behavior. for Python 2.6 and newer, that provide the new I/O
-# library, derrive from io.RawIOBase
+# library, derive from io.RawIOBase
 try:
     import io
 except ImportError:
